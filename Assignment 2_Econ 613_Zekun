@@ -1,0 +1,975 @@
+getwd()
+setwd(dir = "E:/Econ 613")
+
+#// Data Import
+
+# install.packages("bayesm")
+library("bayesm")
+data(margarine)
+View(margarine)
+head(margarine)
+summary(margarine)
+library(mclogit)
+
+#// Exercise 1
+#/ Question 1
+variable_single <- c("choicePrice"$"PPk_Stk")
+
+Variable_Stk <- c("PPk_Stk", "PBB_Stk", "PFl_Stk", "PHse_Stk", "PGen_Stk", "PImp_Stk")
+Variable_Tub <- c("PSS_Tub", "PPk_Tub", "PFl_Tub", "PHse_Tub")
+summary(margarine[["choicePrice"]][Variable_Stk])
+summary(margarine[["choicePrice"]][Variable_Tub])
+library(pastecs)
+stat.desc(margarine[["choicePrice"]][Variable_Stk])
+stat.desc(margarine[["choicePrice"]][Variable_Tub])
+
+#/ Question 2
+help("nrow")
+nrow(as.matrix(margarine$choicePrice[, 2]))
+table(margarine$choicePrice[, 2])
+proportions(margarine$choicePrice[, 2])
+proportions(table(margarine$choicePrice[, 2]))
+
+# install.packages("dplyr")
+library(dplyr)
+help("subset.matrix")
+E1_Q2 = merge.data.frame(margarine[["choicePrice"]], margarine[["demos"]])
+Choice_Proportion<- table(margarine$choicePrice[, 2])
+head(Choice_Proportion)
+choice_with_character = E1_Q2 %>% mutate(FinalChoice = ifelse(choice==1,PPk_Stk,ifelse(choice==2,PBB_Stk,ifelse(choice==3,PFl_Stk,ifelse(choice==4,PHse_Stk,ifelse(choice==5,PGen_Stk,ifelse(choice==6,PImp_Stk,ifelse(choice==7,PSS_Tub,ifelse(choice==8,PPk_Tub,ifelse(choice==9,PFl_Tub,PHse_Tub))))))))))
+# Pick Up Choice One and Choice Two as two examples
+Final_1 <- subset(choice_with_character,choice_with_character$choice == 1)
+choice1_Top_To_Down<- subset(Final_1,Final_1$FinalChoice>line[1])
+Final_2 <- subset(choice_with_character,choice_with_character$choice == 2)
+choice2_Top_To_Down<- subset(Final_2,Final_2$FinalChoice>line[2])
+Above_The_Average1<- nrow(choice1_Top_To_Down)
+head(Above_The_Average1)
+#[1] 788
+Below_The_Average1<- Choice_Proportion[1]-Above_The_Average1
+head(Below_The_Average1)
+# 1 
+# 978
+Above_The_Average2<- nrow(choice2_Top_To_Down)
+head(Above_The_Average2)
+#[1] 263
+Below_The_Average2<- Choice_Proportion[2]-Above_The_Average2
+head(Below_The_Average2)
+# 2 
+# 436 
+
+#/ Question 3
+# install.packages("plm")
+library(plm)
+View(margarine)
+print(table(margarine$choicePrice[,2]))
+# This question ask us to merge the sub-sample "choicePrice" and "demo"
+Combined_data <- merge(margarine[["choicePrice"]], margarine[["demos"]], by = "hhid", all.x = TRUE)
+simple_Regression <- lm(as.matrix(Combined_data[,2])~as.matrix(Combined_data[,3:12]), data = Combined_data)
+summary(simple_Regression)
+simple_Regression_Fixed <- plm(as.matrix(Combined_data[,2]) ~ as.matrix(Combined_data[,3:12]), index = c("hhid"), model = "within", data = Combined_data)
+summary(simple_Regression_Fixed)
+
+
+#// Exercise 2
+#/ Question 1, here I will use a package estimation, whereas in the question 2, I will turn to use the optimization estimation.
+head(Combined_data, 3)
+head(margarine$choicePrice, 3)
+
+# Conditional Logit Models
+CLM_Price_To_Demand <- mclogit(cbind(choice, hhid) ~ PPk_Stk+PBB_Stk+PFl_Stk+PHse_Stk+PGen_Stk+PImp_Stk+PSS_Tub+PPk_Tub+PFl_Tub+PHse_Tub, data = margarine[["choicePrice"]])
+summary(CLM_Price_To_Demand)
+# Conditional Logit Models_Double Check
+CLM_DC_Price_To_Demand <- mclogit(cbind(choice, hhid) ~ PPk_Stk+PBB_Stk+PFl_Stk+PHse_Stk+PGen_Stk+PImp_Stk+PSS_Tub+PPk_Tub+PFl_Tub+PHse_Tub, data = Combined_data)
+summary(CLM_DC_Price_To_Demand)
+# Multinomial Logistic Regression
+# install.packages("nnet")
+library(nnet)
+help("nnet")
+MNR_Price_To_Demand <- multinom(choice ~ PPk_Stk+PBB_Stk+PFl_Stk+PHse_Stk+PGen_Stk+PImp_Stk+PSS_Tub+PPk_Tub+PFl_Tub+PHse_Tub, data = margarine[["choicePrice"]])
+summary(MNR_Price_To_Demand)
+# Multinomial Logistic Regression_Double Check
+MNR_DC_Price_To_Demand <- multinom(choice ~ PPk_Stk+PBB_Stk+PFl_Stk+PHse_Stk+PGen_Stk+PImp_Stk+PSS_Tub+PPk_Tub+PFl_Tub+PHse_Tub, data = Combined_data)
+summary(MNR_DC_Price_To_Demand)
+
+# Question 2
+# Firstly, I will focus on getting the result of conditional multinomial logistic regression via mlogit package and the optimization function.  
+library(mlogit)
+PriceSet = margarine$choicePrice
+colnames(PriceSet)[3:12]=paste0("PriceSet",1:10)
+cml_PriceSet = mlogit.data(PriceSet,varying=3:12,shape="wide",sep="",choice="choice")
+cml_E2_Q2 = mlogit(choice ~ PriceSet,data = cml_PriceSet)
+summary(cml_E2_Q2)
+
+# Coefficients :
+#                 Estimate  Std. Error  z-value   Pr(>|z|)    
+# (Intercept):2  -0.954307   0.050046  -19.0685   < 2.2e-16 ***
+# (Intercept):3   1.296968   0.108651   11.9370   < 2.2e-16 ***
+# (Intercept):4  -1.717332   0.054158  -31.7096   < 2.2e-16 ***
+# (Intercept):5  -2.904005   0.071461  -40.6379   < 2.2e-16 ***
+# (Intercept):6  -1.515311   0.126230  -12.0043   < 2.2e-16 ***
+# (Intercept):7   0.251768   0.079164    3.1803     0.001471 ** 
+# (Intercept):8   1.464868   0.118047   12.4092   < 2.2e-16 ***
+# (Intercept):9   2.357505   0.133774   17.6230   < 2.2e-16 ***
+# (Intercept):10 -3.896593   0.177419  -21.9627   < 2.2e-16 ***
+# PriceSet       -6.656580   0.174279  -38.1949   < 2.2e-16 ***
+
+# Here I redo the Conditional Logistic Regression with optimization codes by hand.
+
+ROW = nrow(PriceSet)
+COL = ncol(PriceSet[,3:12])
+
+Dependent_Variable = matrix(0,ROW,COL)
+for (i in 1:COL){
+  for (j in 2:ROW){
+    if (PriceSet$choice[j]==i){
+      Dependent_Variable[j,i]=1
+    }
+  }
+}
+
+Dependent_Variable[1,1] = 1
+
+CML_loglike<-function(ll){
+# Set up an Initial Matrix
+  Initial_Matrix = cbind(0,matrix(rep(ll[1:COL-1],each = ROW),ROW,COL-1))
+  
+  Explanantion_Part = PriceSet[,3:12] * ll[COL]
+  Explanantion_Part = Initial_Matrix + Explanantion_Part
+  EXP_Explanantion_Part = exp(Explanantion_Part)
+  TE_Explanantion_Part = rowSums(EXP_Explanantion_Part)
+# Set Up the description of Probability
+  P = EXP_Explanantion_Part/TE_Explanantion_Part
+  
+  log_like = sum(Dependent_Variable * log(P))
+  return(-log_like)
+}
+
+# Optimization
+set.seed(111)
+CML_OP <- optim(runif(10,-1,1),CML_loglike,method="BFGS")
+CML_OP$par
+#[1] -0.9542845  1.2969909 -1.7173609 -2.9039674 -1.5152779  0.2517494  1.4648639
+#[8]  2.3575283 -3.8966447 -6.6565684
+
+
+# Here I redo the Multinomial Logistic Regression with optimization codes by hand. 
+MNR_DC_Price_To_Demand <- multinom(choice ~ PPk_Stk+PBB_Stk+PFl_Stk+PHse_Stk+PGen_Stk+PImp_Stk+PSS_Tub+PPk_Tub+PFl_Tub+PHse_Tub, data = Combined_data)
+summary(MNR_DC_Price_To_Demand)
+# As a comparison test and for simplicity, I will only include variable "PPk_Stk" and the intercept.
+# Here comes the the result of package testings
+MNR_DC1_Price_To_Demand <- multinom(choice ~ PPk_Stk, data = Combined_data)
+summary(MNR_DC1_Price_To_Demand)
+#Coefficients:
+#  (Intercept)  PPk_Stk
+#2    -4.806660 7.342036
+#3    -4.084086 4.200240
+#4    -3.876270 5.433730
+#5    -6.550702 8.951317
+#6    -4.829288 3.375578
+#7    -3.842127 4.255465
+#8    -5.473682 6.357659
+#9    -4.033874 3.966221
+#10   -6.849132 5.583049
+
+# Here comes the result from hand coding via optimization().
+set.seed(111)
+data = margarine[["choicePrice"]]
+
+data$choice_1 <- ifelse(data$choice == 1, 1, 0)
+data$choice_2 <- ifelse(data$choice == 2, 1, 0)
+data$choice_3 <- ifelse(data$choice == 3, 1, 0)
+data$choice_4 <- ifelse(data$choice == 4, 1, 0)
+data$choice_5 <- ifelse(data$choice == 5, 1, 0)
+data$choice_6 <- ifelse(data$choice == 6, 1, 0)
+data$choice_7 <- ifelse(data$choice == 7, 1, 0)
+data$choice_8 <- ifelse(data$choice == 8, 1, 0)
+data$choice_9 <- ifelse(data$choice == 9, 1, 0)
+data$choice_10 <- ifelse(data$choice == 10, 1, 0)
+
+int = rep(1, nrow(data))
+dataX_for_choice = cbind(int, data[,c(3:12)]) 
+X = as.matrix(dataX_for_choice[, c(1:2)]) # 4470 * 2
+y_1 = as.matrix(data[, 13]) 
+y_2 = as.matrix(data[, 14]) 
+y_3 = as.matrix(data[, 15]) 
+y_4 = as.matrix(data[, 16])
+y_5 = as.matrix(data[, 17])
+y_6 = as.matrix(data[, 18])
+y_7 = as.matrix(data[, 19])
+y_8 = as.matrix(data[, 20])
+y_9 = as.matrix(data[, 21])
+y_10 = as.matrix(data[, 22])
+Y = cbind(y_2, y_3, y_4, y_5, y_6, y_7, y_8, y_9, y_10) # 4470 * 9
+Initial_Value_Price_To_Demand <- c(-4.8, 7.3, -4.1, 4.2, -3.9, 5.4, -6.5, 9, -4.83, 3.4, -3.8, 4.3, -5.5, 6.4, -4, 4, -7, 5.6)
+
+xb <- matrix(0, nrow=4470, ncol= 9) # 4470 * 9
+
+multinom_Price_To_Demand <- function(Price_To_Demand){
+  Price_To_Demand <- matrix(Price_To_Demand, nrow= 9, ncol= 2, byrow= T) # 9 * 2 
+  xb <- X %*% t(Price_To_Demand) # 4470 * 9
+  
+  exp_xb <- exp(xb) # 4470 * 9
+  sumexp <- rowSums(exp_xb) # 4470 * 1
+  sumexp <- as.numeric(sumexp)
+  
+  yxb <- Y*xb 
+  sumyxb <- sum(yxb)
+  
+  log_likelihood <-  sumyxb-sum(log(1+sumexp))
+  -log_likelihood
+}
+
+multinom_Price_To_Demand_Selfcode <- optim(par = Initial_Value_Price_To_Demand, fn = multinom_Price_To_Demand)
+multinom_Price_To_Demand_Selfcode
+#$par
+#[1] -4.805014  7.370703 -4.097901  4.258721 -3.872779  5.457615 -6.571359  9.027368
+#[9] -4.858455  3.483224 -3.876708  4.356564 -5.492124  6.428330 -4.064168  4.061767
+#[17] -6.817079  5.598873
+
+summary(MNR_DC1_Price_To_Demand)
+#Coefficients:
+#  (Intercept)  PPk_Stk
+#2    -4.806660 7.342036
+#3    -4.084086 4.200240
+#4    -3.876270 5.433730
+#5    -6.550702 8.951317
+#6    -4.829288 3.375578
+#7    -3.842127 4.255465
+#8    -5.473682 6.357659
+#9    -4.033874 3.966221
+#10   -6.849132 5.583049
+
+# We could have one additional check through an all-sum optimization. 
+# Firstly, we need to have the optimization function:
+Q2_function = function(par,X,yhat_Q2)
+{
+  xbeta_Q2 = as.matrix(X)%*%as.matrix(par)
+  pr = exp(xbeta_Q2)/(1+exp(xbeta_Q2))
+  pr[pr>0.999999] = 0.999999
+  pr[pr<0.000001] = 0.000001
+  like = yhat_Q2*log(pr) + (1-yhat_Q2)*log(1-pr)
+  return(-sum(like))
+}
+
+# Secondly, we need to see multinomial logistic regression as 9-time binomial logistic regressions.
+# Benchmark: 2nd logistic regression
+subset_Baseline<- subset(margarine$choicePrice, margarine$choicePrice$choice<3)
+subset_Choice2<- dplyr::mutate(subset_Baseline,choice2=subset_Baseline$choice-1)
+set.seed(123)
+Initial_value = runif(11,-1,1)
+Q2_Benchmark  = optim(Initial_value,fn = Q2_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,margarine$choicePrice[,3:12]),yhat_Q2=subset_Choice2$choice2,hessian=TRUE)
+Q2_Benchmark$par
+#[1] -7.68701340 -0.21431198 -0.34659262  1.07842382  0.35326879  1.14735744
+#[7] -0.87352077 -0.55623919 -1.98721395  7.25066999  0.08710875
+
+# 3th logistic regression
+subset_Baseline2<- subset(margarine$choicePrice, margarine$choicePrice$choice>1 & margarine$choicePrice$choice<4)
+subset_Choice3<- dplyr::mutate(subset_Baseline2,choice3=subset_Baseline2$choice-2)
+set.seed(1234)
+Initial_value = runif(11,-1,1)
+Q2_Choice3  = optim(Initial_value,fn = Q2_function,method="BFGS",control=list(trace=6,maxit=1000),X=cbind(1,margarine$choicePrice[,3:12]),yhat_Q2=subset_Choice3$choice3,hessian=TRUE)
+Q2_Choice3$par
+#[1] -5.24033672  0.03589476  0.29476894 -1.01053868  0.38211105  0.58973797
+#[7] -0.50795357  0.46072159 -0.11088524  4.46262046 -0.88654350
+
+# 4th logistic regression
+subset_Baseline3<- subset(margarine$choicePrice, margarine$choicePrice$choice>2 & margarine$choicePrice$choice<5)
+subset_Choice4<- dplyr::mutate(subset_Baseline3,choice4=subset_Baseline3$choice-3)
+set.seed(12345)
+Initial_value = runif(11,-1,1)
+Q2_Choice4  = optim(Initial_value,fn = Q2_function,method="BFGS",control=list(trace=6,maxit=1000),X=cbind(1,margarine$choicePrice[,3:12]),yhat_Q2=subset_Choice4$choice4,hessian=TRUE)
+Q2_Choice4$par
+#[1]  1.008566168  0.053352941  0.707975468  2.583181242 -0.535998681 -1.177547181
+#[7] -0.318148205  0.431574155 -0.001247101 -2.452021475  0.446529206
+
+# 5th logistic regression
+subset_Baseline4<- subset(margarine$choicePrice, margarine$choicePrice$choice>3 & margarine$choicePrice$choice<6)
+subset_Choice5<- dplyr::mutate(subset_Baseline4,choice5=subset_Baseline4$choice-4)
+set.seed(12345)
+Initial_value = runif(11,-1,1)
+Q2_Choice5  = optim(Initial_value,fn = Q2_function,method="BFGS",control=list(trace=6,maxit=1000),X=cbind(1,margarine$choicePrice[,3:12]),yhat_Q2=subset_Choice5$choice5,hessian=TRUE)
+Q2_Choice5$par
+#[1]  5.13587867 -0.37456505 -0.30796767  1.24827017 -0.17743956 -1.11961418
+#[7] -0.55288435  0.90520000 -3.95048419 -1.89663633 -0.02783151
+
+# 6th logistic regression
+subset_Baseline5<- subset(margarine$choicePrice, margarine$choicePrice$choice>4 & margarine$choicePrice$choice<7)
+subset_Choice6<- dplyr::mutate(subset_Baseline5,choice6=subset_Baseline5$choice-5)
+set.seed(12345)
+Initial_value = runif(11,-1,1)
+Q2_Choice6  = optim(Initial_value,fn = Q2_function,method="BFGS",control=list(trace=6,maxit=1000),X=cbind(1,margarine$choicePrice[,3:12]),yhat_Q2=subset_Choice6$choice6,hessian=TRUE)
+Q2_Choice6$par
+#[1]  1.03342334 -0.08318065 -0.31137735  0.65764894 -0.13464798 -2.94754158
+#[7]  0.72427372 -0.67395853 -1.49560467 -0.87062988  1.38452572
+
+# 7th logistic regression
+subset_Baseline6<- subset(margarine$choicePrice, margarine$choicePrice$choice>5 & margarine$choicePrice$choice<8)
+subset_Choice7<- dplyr::mutate(subset_Baseline6,choice7=subset_Baseline6$choice-6)
+set.seed(12345)
+Initial_value = runif(11,-1,1)
+Q2_Choice7  = optim(Initial_value,fn = Q2_function,method="BFGS",control=list(trace=6,maxit=1000),X=cbind(1,margarine$choicePrice[,3:12]),yhat_Q2=subset_Choice7$choice7,hessian=TRUE)
+Q2_Choice7$par
+#[1] -3.15080895  0.52937361  0.24205029  2.17253355 -0.58192272  1.49772277
+#[7]  0.36310908 -1.39233534  2.74388387 -0.27844739 -0.04995413
+
+# 8th logistic regression
+subset_Baseline7<- subset(margarine$choicePrice, margarine$choicePrice$choice>6 & margarine$choicePrice$choice<9)
+subset_Choice8<- dplyr::mutate(subset_Baseline7,choice8=subset_Baseline7$choice-7)
+set.seed(12345)
+Initial_value = runif(11,-1,1)
+Q2_Choice8  = optim(Initial_value,fn = Q2_function,method="BFGS",control=list(trace=6,maxit=1000),X=cbind(1,margarine$choicePrice[,3:12]),yhat_Q2=subset_Choice8$choice8,hessian=TRUE)
+Q2_Choice8$par
+#[1]  3.3902421 -0.0623871 -0.4152735  1.4298054  0.1399111 -2.7202175 -0.1137479
+#[8]  0.1008817 -3.3484719 -0.6834922  0.4925874
+
+# 9th logistic regression
+subset_Baseline8<- subset(margarine$choicePrice, margarine$choicePrice$choice>7 & margarine$choicePrice$choice<10)
+subset_Choice9<- dplyr::mutate(subset_Baseline8,choice9=subset_Baseline8$choice-8)
+set.seed(12345)
+Initial_value = runif(11,-1,1)
+Q2_Choice9  = optim(Initial_value,fn = Q2_function,method="BFGS",control=list(trace=6,maxit=1000),X=cbind(1,margarine$choicePrice[,3:12]),yhat_Q2=subset_Choice9$choice9,hessian=TRUE)
+Q2_Choice9$par
+#[1]  0.26178705  0.39504655  0.52236832 -1.48375998  0.08044267 -3.31599866
+#[7]  0.84450558 -0.30654611 -1.56863604  2.88009520 -0.29939227
+
+#10th logistic regression
+subset_Baseline9<- subset(margarine$choicePrice, margarine$choicePrice$choice>8)
+subset_Choice10<- dplyr::mutate(subset_Baseline9,choice10=subset_Baseline9$choice-9)
+set.seed(1234)
+Initial_value = runif(11,-1,1)
+Q2_Choice10  = optim(Initial_value,fn = Q2_function,method="BFGS",control=list(trace=6,maxit=1000),X=cbind(1,margarine$choicePrice[,3:12]),yhat_Q2=subset_Choice10$choice10,hessian=TRUE)
+Q2_Choice10$par
+#[1] -2.23697829  0.25126415  0.35586642 -1.41503169 -0.02198587  3.43730069
+#[7]  0.08804916 -0.73770824  3.80605498 -2.80717904  0.03321282
+
+Q2_Final_Result<- rbind(Q2_Benchmark$par,Q2_Choice3$par,Q2_Choice4$par,Q2_Choice5$par,Q2_Choice6$par,Q2_Choice7$par,Q2_Choice8$par,Q2_Choice9$par,Q2_Choice10$par)
+colnames(Q2_Final_Result) <- c("intercept", "PPk_Stk", "PBB_Stk", "PFl_Stk", "PHse_Stk", "PGen_Stk", "PImp_Stk", "PSS_Tub", "PPk_Tub", "PFl_Tub", "PHse_Tub")
+Q2_Final_Result
+
+library(nnet)
+help("nnet")
+MNR_Price_To_Demand <- multinom(choice ~ PPk_Stk+PBB_Stk+PFl_Stk+PHse_Stk+PGen_Stk+PImp_Stk+PSS_Tub+PPk_Tub+PFl_Tub+PHse_Tub, data = margarine[["choicePrice"]])
+summary(MNR_Price_To_Demand)
+
+## By comparison, it is clearly to see that the result of self-coding optimization is approximately similar to the result of using "nnet" package.
+
+#/ Question 3
+# I will use the coefficients of PPK_Stk at choice Two and choice Three as comparative examples.
+# The coefficient of PPK_Stk at choice Two means that holding other variables constant, compared to the base choice of product One, one unit increase of the price of PPk_Stk will lead the customers to purchase more product Two. 
+# Because of the function of log likelihood, the exact number of the coefficient of PPK_Stk at choice Two does not mean anything.
+
+# The coefficient of PPK_Stk at choice Three means that holding other variables constant, compared to the base choice of product One, one unit increase of the price of PPk_Stk will lead the customers to purchase more product Three. 
+# Because of the function of log likelihood, the exact number of the coefficient of PPK_Stk at choice Three does not mean anything, either.
+
+
+##// Exercise Three
+#/ Question 1, here I will use a package estimation, whereas in the question 2, I will turn to use the optimization estimation.
+head(Combined_data, 3)
+head(margarine$choicePrice, 3)
+
+# Multinomial Logistic Regression
+# install.packages("nnet")
+library(nnet)
+help("nnet")
+MNR_Income_To_Demand <- multinom(choice ~ Income, data = Combined_data)
+summary(MNR_Income_To_Demand)
+
+# Coefficients:
+# (Intercept)       Income
+#2   -0.8452647 -0.003090411
+#3   -2.3998788  0.014585718
+#4   -1.2013259  0.004048980
+#5   -1.6906023 -0.001252529
+#6   -4.1397737  0.030610579
+#7   -1.5308954 -0.006934943
+#8   -2.8482683  0.022885418
+#9   -2.5755876  0.017742551
+#10  -4.2816625  0.010774045
+
+#/ Question Two
+# Here comes the result from hand coding via optimization().
+set.seed(111)
+data_MNR = Combined_data
+
+data_MNR$choice_1 <- ifelse(data_MNR$choice == 1, 1, 0)
+data_MNR$choice_2 <- ifelse(data_MNR$choice == 2, 1, 0)
+data_MNR$choice_3 <- ifelse(data_MNR$choice == 3, 1, 0)
+data_MNR$choice_4 <- ifelse(data_MNR$choice == 4, 1, 0)
+data_MNR$choice_5 <- ifelse(data_MNR$choice == 5, 1, 0)
+data_MNR$choice_6 <- ifelse(data_MNR$choice == 6, 1, 0)
+data_MNR$choice_7 <- ifelse(data_MNR$choice == 7, 1, 0)
+data_MNR$choice_8 <- ifelse(data_MNR$choice == 8, 1, 0)
+data_MNR$choice_9 <- ifelse(data_MNR$choice == 9, 1, 0)
+data_MNR$choice_10 <- ifelse(data_MNR$choice == 10, 1, 0)
+
+int_MNR = rep(1, nrow(data_MNR))
+dataMNRX_for_choice = cbind(int_MNR, data_MNR[,c(3:13)]) 
+X_MNR = as.matrix(dataMNRX_for_choice[, c(1,12)]) # 4470 * 2
+y_1_MNR = as.matrix(data_MNR[, 20]) 
+y_2_MNR = as.matrix(data_MNR[, 21]) 
+y_3_MNR = as.matrix(data_MNR[, 22]) 
+y_4_MNR = as.matrix(data_MNR[, 23])
+y_5_MNR = as.matrix(data_MNR[, 24])
+y_6_MNR = as.matrix(data_MNR[, 25])
+y_7_MNR = as.matrix(data_MNR[, 26])
+y_8_MNR = as.matrix(data_MNR[, 27])
+y_9_MNR = as.matrix(data_MNR[, 28])
+y_10_MNR = as.matrix(data_MNR[, 29])
+Y_MNR = cbind(y_2_MNR, y_3_MNR, y_4_MNR, y_5_MNR, y_6_MNR, y_7_MNR, y_8_MNR, y_9_MNR, y_10_MNR) # 4470 * 9
+Initial_Value_Income_To_Demand <- c(-0.85, 0, -2.4, 0.01, -1.2, 0, -1.7, 0, -4, 0.03, -1.5, 0, -2.85, 0.02, -2.6, 0.02, -4.3, 0.01)
+
+xb_MNR <- matrix(0, nrow=4470, ncol= 9) # 4470 * 9
+
+multinom_Income_To_Demand <- function(Income_To_Demand){
+  Income_To_Demand <- matrix(Income_To_Demand, nrow= 9, ncol= 2, byrow= T) # 9 * 2 
+  xb_MNR <- X %*% t(Income_To_Demand) # 4470 * 9
+  
+  exp_xb_MNR <- exp(xb_MNR) # 4470 * 9
+  sumexp_MNR <- rowSums(exp_xb_MNR) # 4470 * 1
+  sumexp_MNR <- as.numeric(sumexp_MNR)
+  
+  yxb_MNR <- Y*xb_MNR 
+  sumyxb_MNR <- sum(yxb_MNR)
+  
+  log_likelihood_MNR <-  sumyxb_MNR - sum(log(1+sumexp_MNR))
+  -log_likelihood_MNR
+}
+
+multinom_Income_To_Demand_Selfcode <- optim(par = Initial_Value_Income_To_Demand, fn = multinom_Income_To_Demand)
+multinom_Income_To_Demand_Selfcode
+# $par
+#[1] -0.852553906 -0.002983336 -2.346592289  0.012758897 -1.145632340  0.002398917
+#[7] -1.644061894 -0.003000966 -4.005742088  0.027794734 -1.487230614 -0.008165845
+#[13] -2.798962373  0.021251972 -2.555467614  0.016828621 -4.204923767  0.007324394
+
+summary(MNR_Income_To_Demand)
+# Coefficients:
+# (Intercept)       Income
+#2   -0.8452647 -0.003090411
+#3   -2.3998788  0.014585718
+#4   -1.2013259  0.004048980
+#5   -1.6906023 -0.001252529
+#6   -4.1397737  0.030610579
+#7   -1.5308954 -0.006934943
+#8   -2.8482683  0.022885418
+#9   -2.5755876  0.017742551
+#10  -4.2816625  0.010774045
+
+# We could use one alternative way as a double check
+# Exercise's optimization function:
+Q3_function = function(par,X,yhat_Q3)
+{
+  xbeta_Q3 = as.matrix(X)%*%as.matrix(par)
+  pr = exp(xbeta_Q3)/(1+exp(xbeta_Q3))
+  pr[pr>0.999999] = 0.999999
+  pr[pr<0.000001] = 0.000001
+  like = yhat_Q3*log(pr) + (1-yhat_Q3)*log(1-pr)
+  return(-sum(like))
+}
+
+# We need to see multinomial logistic regression as 9-time binomial logistic regressions.
+# Benchmark: 2nd logistic regression
+set.seed(1)
+subset_Baseline<- subset(Combined_data, Combined_data$choice<3)
+subset_Choice2<- dplyr::mutate(subset_Baseline,choice2=subset_Baseline$choice-1)
+Initial_value = runif(2,-1,1)
+Q3_Benchmark  = optim(Initial_value,fn = Q3_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,13]),yhat_Q3=subset_Choice2$choice2,hessian=TRUE)
+Q3_Benchmark$par
+#[1] -0.996853952  0.001824858
+
+# 3rd logistic regression
+set.seed(11)
+subset_Baseline2<- subset(Combined_data, Combined_data$choice>1 & Combined_data$choice<4)
+subset_Choice3<- dplyr::mutate(subset_Baseline2,choice3=subset_Baseline2$choice-2)
+Initial_value = runif(2,-1,1)
+Q3_Choice3= optim(Initial_value,fn = Q3_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,13]),yhat_Q3=subset_Choice3$choice3,hessian=TRUE)
+Q3_Choice3$par
+# [1] -1.0637158644  0.0006341264
+
+# 4nd logistic regression
+set.seed(3)
+subset_Baseline3<- subset(Combined_data, Combined_data$choice>2 & Combined_data$choice<5)
+subset_Choice4<- dplyr::mutate(subset_Baseline3,choice4=subset_Baseline3$choice-3)
+Initial_value = runif(2,-1,1)
+Q3_Choice4 = optim(Initial_value,fn = Q3_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,13]),yhat_Q3=subset_Choice4$choice4,hessian=TRUE)
+Q3_Choice4$par
+# [1]  0.8521405606 -0.0003310878
+
+# 5th logistic regression 
+set.seed(4)
+subset_Baseline4<- subset(Combined_data, Combined_data$choice>3 & Combined_data$choice<6)
+subset_Choice5<- dplyr::mutate(subset_Baseline4,choice5=subset_Baseline4$choice-4)
+Initial_value = runif(2,-1,1)
+Q3_Choice5 = optim(Initial_value,fn = Q3_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,13]),yhat_Q3=subset_Choice5$choice5,hessian=TRUE)
+Q3_Choice5$par
+# [1]  -0.68127306  0.00176482
+
+# 6th logistic regression 
+set.seed(50)
+subset_Baseline5<- subset(Combined_data, Combined_data$choice>4 & Combined_data$choice<7)
+subset_Choice6<- dplyr::mutate(subset_Baseline5,choice6=subset_Baseline5$choice-5)
+Initial_value = runif(2,-1,1)
+Q3_Choice6 = optim(Initial_value,fn = Q3_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,13]),yhat_Q3=subset_Choice6$choice6,hessian=TRUE)
+Q3_Choice6$par
+#[1] -1.319593620 -0.004095571
+
+# 7th logistic regression 
+set.seed(6)
+subset_Baseline6<- subset(Combined_data, Combined_data$choice>5 & Combined_data$choice<8)
+subset_Choice7<- dplyr::mutate(subset_Baseline6,choice7=subset_Baseline6$choice-6)
+Initial_value = runif(2,-1,1)
+Q3_Choice7 = optim(Initial_value,fn = Q3_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,13]),yhat_Q3=subset_Choice7$choice7,hessian=TRUE)
+Q3_Choice7$par
+#[1] 1.370504258 0.002752694
+
+# 8th logistic regression 
+set.seed(7)
+subset_Baseline7<- subset(Combined_data, Combined_data$choice>6 & Combined_data$choice<9)
+subset_Choice8<- dplyr::mutate(subset_Baseline7,choice8=subset_Baseline7$choice-7)
+Initial_value = runif(2,-1,1)
+Q3_Choice8 = optim(Initial_value,fn = Q3_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,13]),yhat_Q3=subset_Choice8$choice8,hessian=TRUE)
+Q3_Choice8$par
+#[1] -0.4616848640  0.0008165246
+
+# 9th logistic regression 
+set.seed(8)
+subset_Baseline8<- subset(Combined_data, Combined_data$choice>7 & Combined_data$choice<10)
+subset_Choice9<- dplyr::mutate(subset_Baseline8,choice9=subset_Baseline8$choice-8)
+Initial_value = runif(2,-1,1)
+Q3_Choice9 = optim(Initial_value,fn = Q3_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,13]),yhat_Q3=subset_Choice9$choice9,hessian=TRUE)
+Q3_Choice9$par
+#[1]  0.177322803 -0.002588143
+
+# 10th logistic regression 
+set.seed(9)
+subset_Baseline9<- subset(Combined_data, Combined_data$choice>8)
+subset_Choice10<- dplyr::mutate(subset_Baseline9,choice10=subset_Baseline9$choice-9)
+Initial_value = runif(2,-1,1)
+Q3_Choice10 = optim(Initial_value,fn = Q3_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,13]),yhat_Q3=subset_Choice10$choice10,hessian=TRUE)
+Q3_Choice10$par
+#[1] -2.033758027  0.003877212
+
+Q3_Final_Result<- rbind(Q3_Benchmark$par,Q3_Choice3$par,Q3_Choice4$par,Q3_Choice5$par,Q3_Choice6$par,Q3_Choice7$par,Q3_Choice8$par,Q3_Choice9$par,Q3_Choice10$par)
+colnames(Q3_Final_Result) <- c("intercept", "Income")
+Q3_Final_Result
+#      intercept        Income
+#[1,] -0.9968540  0.0018248575
+#[2,] -1.0637264  0.0006343525
+#[3,]  0.8522893 -0.0003329888
+#[4,] -0.6812731  0.0017648204
+#[5,] -1.3195545 -0.0041007378
+#[6,]  1.3705043  0.0027526936
+#[7,] -0.4616849  0.0008165246
+#[8,]  0.1773228 -0.0025881435
+#[9,] -2.0337580  0.0038772124
+
+## By comparison, it is clearly to see that the result of self-coding optimization is approximately similar to the result of using "nnet" package via "multinom" function.
+
+#/ Question 3
+# I will use the coefficients of Income at choice Two and choice Three as comparison examples.
+# The coefficient of Income at choice Two means that holding other variables constant, compared to the base choice of product One, one unit increase of Income will lead the customers to purchase less product Two. 
+# Because of the function of log likelihood, the exact number of the coefficient of Income at choice Two does not mean anything.
+
+# The coefficient of Income at choice Three means that holding other variables constant, compared to the base choice of product One, one unit increase of Income will lead the customers to purchase more product Three. 
+# Because of the function of log likelihood, the exact number of the coefficient of Income at choice Three does not mean anything, either.
+
+##// Exercise Four
+
+## For Question Two
+# multinominal logistic regression 
+library(mclogit)
+CLM_Price_To_Demand <- mclogit(cbind(choice, hhid) ~ PPk_Stk+PBB_Stk+PFl_Stk+PHse_Stk+PGen_Stk+PImp_Stk+PSS_Tub+PPk_Tub+PFl_Tub+PHse_Tub, data = margarine[["choicePrice"]])
+summary(CLM_Price_To_Demand)
+library(margins)
+marginal_effect_Price_To_Demand <- marginal_effects(CLM_Price_To_Demand)
+head.matrix(marginal_effect_Price_To_Demand)
+#   dydx_PPk_Stk dydx_PBB_Stk dydx_PFl_Stk dydx_PHse_Stk dydx_PGen_Stk dydx_PImp_Stk
+#1   0.13936895   0.03775252   0.04234193   -0.04243099    0.10287479  -0.004595236
+#2   0.12586755   0.03409524   0.03824004   -0.03832048    0.09290878  -0.004150071
+#3   0.07415246   0.02008656   0.02252839   -0.02257578    0.05473543  -0.002444935
+#4   0.11758069   0.03185048   0.03572240   -0.03579754    0.08679186  -0.003876839
+#5   0.09940551   0.02692715   0.03020056   -0.03026409    0.07337590  -0.003277572
+#6   0.10620567   0.02876919   0.03226653   -0.03233440    0.07839541  -0.003501785
+#   dydx_PSS_Tub dydx_PPk_Tub dydx_PFl_Tub dydx_PHse_Tub
+#1  -0.10638961  0.006290662   0.02153690  -0.018418541
+#2  -0.09608309  0.005681253   0.01945051  -0.016634241
+#3  -0.05660552  0.003347002   0.01145890  -0.009799745
+#4  -0.08975718  0.005307211   0.01816993  -0.015539077
+#5  -0.07588285  0.004486842   0.01536129  -0.013137105
+#6  -0.08107387  0.004793779   0.01641213  -0.014035791
+
+marginal_effect_Price_To_Demand_Example <- marginal_effects(CLM_Price_To_Demand, variables = "PPk_Stk")
+head.matrix(marginal_effect_Price_To_Demand_Example)
+#   dydx_PPk_Stk
+#1   0.13936895
+#2   0.12586755
+#3   0.07415246
+#4   0.11758069
+#5   0.09940551
+#6   0.10620567
+
+# multinominal logistic regression
+library(margins)
+library(nnet)
+# Here firstly, I include the whole coverage of the prices of all brands.
+MNR_DC_Price_To_Demand <- multinom(choice ~ PPk_Stk+PBB_Stk+PFl_Stk+PHse_Stk+PGen_Stk+PImp_Stk+PSS_Tub+PPk_Tub+PFl_Tub+PHse_Tub, data = Combined_data)
+summary(MNR_DC_Price_To_Demand)
+summary(MNR_DC_Price_To_Demand, cor = F)
+help("marginal_effects")
+marginal_effect_Price_To_Demand <- marginal_effects(MNR_DC_Price_To_Demand, variables = "PPk_Stk")
+summary(marginal_effect_Price_To_Demand)
+head.matrix(marginal_effect_Price_To_Demand)
+# dydx_PPk_Stk
+#1    -1.514116
+#2    -1.781468
+#3    -1.246747
+#4    -1.723024
+#5    -1.819380
+#6    -1.737634
+All_marginal_effect_Price_To_Demand <- marginal_effects(MNR_DC_Price_To_Demand)
+head.matrix(All_marginal_effect_Price_To_Demand)
+
+#    dydx_PPk_Stk dydx_PBB_Stk dydx_PFl_Stk dydx_PHse_Stk dydx_PGen_Stk dydx_PImp_Stk
+#1    -1.514116    0.2157279   -0.5328468     0.4056130   -0.48594141    0.09715981
+#2    -1.781468    0.4587786   -0.2983363     0.3659617   -0.32148849    0.05500038
+#3    -1.246747    0.4004601   -0.3362007     0.1885884   -0.56457882    0.10879563
+#4    -1.723024    0.5338684   -0.1525904     0.3331998   -0.25338576    0.08846847
+#5    -1.819380    0.4270871   -0.3591983     0.5980382   -0.48047581    0.14410487
+#6    -1.737634    0.7956814    0.1288639     0.4219535   -0.01346068    0.03223380
+
+#    dydx_PSS_Tub dydx_PPk_Tub dydx_PFl_Tub dydx_PHse_Tub
+#1     1.018713   -1.0311202     1.561732    0.03665549
+#2     1.173133   -1.5060914     1.989474   -0.08358241
+#3     1.875284   -0.8544618     1.610297   -0.13611043
+#4     1.038049   -1.5647557     1.920667   -0.17457026
+#5     1.120726   -1.4562497     1.860532   -0.16527351
+#6     0.775840   -2.1741654     2.654120   -0.20352224
+
+# Conditional logit regression: Marginal Effects at means
+Variable_mean <- apply(Combined_data[, 3:12], 2, mean)
+X_beta <- sum(Variable_mean * CLM_Price_To_Demand$coefficients)
+Variable_mean_variation <- apply(Combined_data[, 3:12], 2, function(x) mean(x)+0.00001)
+X_beta_variation <- sum(Variable_mean_variation * CLM_Price_To_Demand$coefficients)
+CLM_ME_Price_To_Demand <- (X_beta_variation - X_beta)/0.00001
+head(CLM_ME_Price_To_Demand)
+# [1] 1.890542
+
+# For Question Three
+MNR_Income_To_Demand <- multinom(choice ~ Income, data = Combined_data)
+summary(MNR_Income_To_Demand)
+summary(MNR_Income_To_Demand, cor = F)
+
+marginal_effect_Income_To_Demand <- marginal_effects(MNR_Income_To_Demand)
+summary(marginal_effect_Income_To_Demand)
+head.matrix(marginal_effect_Income_To_Demand)
+#  dydx_Income
+#1 -0.00117437
+#2 -0.00117437
+#3 -0.00117437
+#4 -0.00117437
+#5 -0.00117437
+#6 -0.00117437
+
+
+#// Exercise Five
+
+# Question 1
+# This time I combine 10 prices and the income variable together. 
+# Firstly, we need to import the likelihood function.
+Q5_function = function(par,X,yhat_Q5)
+{
+  xbeta_Q5 = as.matrix(X)%*%as.matrix(par)
+  pr = exp(xbeta_Q5)/(1+exp(xbeta_Q5))
+  pr[pr>0.999999] = 0.999999
+  pr[pr<0.000001] = 0.000001
+  like = yhat_Q5*log(pr) + (1-yhat_Q5)*log(1-pr)
+  return(-sum(like))
+}
+
+# Benchmark: 2nd logistic regression
+set.seed(11)
+subset_Baseline<- subset(Combined_data, Combined_data$choice<3)
+subset_Choice2<- dplyr::mutate(subset_Baseline,choice2=subset_Baseline$choice-1)
+Initial_value = runif(12,-1,1)
+Q5_Benchmark  = optim(Initial_value,fn = Q5_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,3:13]),yhat_Q5=subset_Choice2$choice2,hessian=TRUE)
+Q5_Benchmark$par
+#[1] -7.746137546 -0.219054285 -0.345074210  1.047046795  0.351322165  1.105865402
+#[7] -0.861214267 -0.543931442 -1.985589736  7.284236572  0.088614603  0.001640977
+
+# 3rd logistic regression
+set.seed(10)
+subset_Baseline2<- subset(Combined_data, Combined_data$choice>1 & Combined_data$choice<4)
+subset_Choice3<- dplyr::mutate(subset_Baseline2,choice3=subset_Baseline2$choice-2)
+Initial_value = runif(12,-1,1)
+Q5_Choice3= optim(Initial_value,fn = Q5_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,3:13]),yhat_Q5=subset_Choice3$choice3,hessian=TRUE)
+Q5_Choice3$par
+#[1] -5.2666043454  0.0340319068  0.2955051021 -1.0151054611  0.3809924520
+#[6]  0.5685948733 -0.5049538584  0.4654603974 -0.1123834150  4.4756355712
+#[11] -0.8852212233  0.0006668972
+
+# 4th logistic regression
+set.seed(13)
+subset_Baseline3<- subset(Combined_data, Combined_data$choice>2 & Combined_data$choice<5)
+subset_Choice4<- dplyr::mutate(subset_Baseline3,choice4=subset_Baseline3$choice-3)
+Initial_value = runif(12,-1,1)
+Q5_Choice4 = optim(Initial_value,fn = Q5_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,3:13]),yhat_Q5=subset_Choice4$choice4,hessian=TRUE)
+Q5_Choice4$par
+#[1]  1.0196443023  0.0543359540  0.7077282570  2.5914788849 -0.5355661438
+#[6] -1.1687745432 -0.3211417794  0.4289839671 -0.0013276361 -2.4592204533
+#[11]  0.4464693783 -0.0003652821
+
+# 5th logistic regression 
+set.seed(14)
+subset_Baseline4<- subset(Combined_data, Combined_data$choice>3 & Combined_data$choice<6)
+subset_Choice5<- dplyr::mutate(subset_Baseline4,choice5=subset_Baseline4$choice-4)
+Initial_value = runif(12,-1,1)
+Q5_Choice5 = optim(Initial_value,fn = Q5_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,3:13]),yhat_Q5=subset_Choice5$choice5,hessian=TRUE)
+Q5_Choice5$par
+#[1]  5.086446449 -0.379669993 -0.306547753  1.216616143 -0.180455200 -1.164246791
+#[7] -0.539136442  0.919165688 -3.946940252 -1.876006826 -0.025232257  0.001733786
+
+# 6th logistic regression 
+set.seed(05)
+subset_Baseline5<- subset(Combined_data, Combined_data$choice>4 & Combined_data$choice<7)
+subset_Choice6<- dplyr::mutate(subset_Baseline5,choice6=subset_Baseline5$choice-5)
+Initial_value = runif(12,-1,1)
+Q5_Choice6 = optim(Initial_value,fn = Q5_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,3:13]),yhat_Q5=subset_Choice6$choice6,hessian=TRUE)
+Q5_Choice6$par
+#[1]  1.105838062 -0.073202577 -0.315728834  0.719984440 -0.128523960 -2.833783222
+#[7]  0.696483774 -0.701385182 -1.496712513 -0.892930094  1.379827236 -0.003857429
+
+# 7th logistic regression 
+set.seed(16)
+subset_Baseline6<- subset(Combined_data, Combined_data$choice>5 & Combined_data$choice<8)
+subset_Choice7<- dplyr::mutate(subset_Baseline6,choice7=subset_Baseline6$choice-6)
+Initial_value = runif(12,-1,1)
+Q5_Choice7 = optim(Initial_value,fn = Q5_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,3:13]),yhat_Q5=subset_Choice7$choice7,hessian=TRUE)
+Q5_Choice7$par
+#[1] -3.219287933  0.522736739  0.244312545  2.130552241 -0.585433333  1.435647727
+#[7]  0.380793333 -1.375104124  2.746376269 -0.245536292 -0.047061457  0.002354926
+
+# 8th logistic regression 
+set.seed(17)
+subset_Baseline7<- subset(Combined_data, Combined_data$choice>6 & Combined_data$choice<9)
+subset_Choice8<- dplyr::mutate(subset_Baseline7,choice8=subset_Baseline7$choice-7)
+Initial_value = runif(12,-1,1)
+Q5_Choice8 = optim(Initial_value,fn = Q5_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,3:13]),yhat_Q5=subset_Choice8$choice8,hessian=TRUE)
+Q5_Choice8$par
+#[1]  3.3683091586 -0.0648333977 -0.4144429544  1.4141503138  0.1386770984
+#[6] -2.7432802401 -0.1071704426  0.1073856600 -3.3471899894 -0.6743367992
+#[11]  0.4937186449  0.0008566807
+
+# 9th logistic regression 
+set.seed(18)
+subset_Baseline8<- subset(Combined_data, Combined_data$choice>7 & Combined_data$choice<10)
+subset_Choice9<- dplyr::mutate(subset_Baseline8,choice9=subset_Baseline8$choice-8)
+Initial_value = runif(12,-1,1)
+Q5_Choice9 = optim(Initial_value,fn = Q5_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,3:13]),yhat_Q5=subset_Choice9$choice9,hessian=TRUE)
+Q5_Choice9$par
+#[1]  0.327983019  0.401917496  0.520116438 -1.442567317  0.084111037 -3.255300881
+#[7]  0.826901053 -0.324802581 -1.574199461  2.854450723 -0.303133499 -0.002365452
+
+# 10th logistic regression 
+set.seed(19)
+subset_Baseline9<- subset(Combined_data, Combined_data$choice>8)
+subset_Choice10<- dplyr::mutate(subset_Baseline9,choice10=subset_Baseline9$choice-9)
+Initial_value = runif(12,-1,1)
+Q5_Choice10 = optim(Initial_value,fn = Q5_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,3:13]),yhat_Q5=subset_Choice10$choice10,hessian=TRUE)
+Q5_Choice10$par
+#[1] -2.328922824  0.240183588  0.360015727 -1.477077147 -0.025556093  3.345606862
+#[7]  0.113489420 -0.706548249  3.826741550 -2.792690599  0.040597481  0.003660978
+
+Q5_Final_Result<- rbind(Q5_Benchmark$par,Q5_Choice3$par,Q5_Choice4$par,Q5_Choice5$par,Q5_Choice6$par,Q5_Choice7$par,Q5_Choice8$par,Q5_Choice9$par,Q5_Choice10$par)
+colnames(Q5_Final_Result) <- c("intercept", "PPk_Stk", "PBB_Stk", "PFl_Stk", "PHse_Stk", "PGen_Stk", "PImp_Stk", "PSS_Tub", "PPk_Tub", "PFl_Tub", "PHse_Tub", "Income")
+Q5_Final_Result
+#    intercept     PPk_Stk    PBB_Stk    PFl_Stk    PHse_Stk   PGen_Stk   PImp_Stk
+#[1,] -7.746138 -0.21905428 -0.3450742  1.0470468  0.35132217  1.1058654 -0.8612143
+#[2,] -5.266604  0.03403191  0.2955051 -1.0151055  0.38099245  0.5685949 -0.5049539
+#[3,]  1.019644  0.05433595  0.7077283  2.5914789 -0.53556614 -1.1687745 -0.3211418
+#[4,]  5.086446 -0.37966999 -0.3065478  1.2166161 -0.18045520 -1.1642468 -0.5391364
+#[5,]  1.105838 -0.07320258 -0.3157288  0.7199844 -0.12852396 -2.8337832  0.6964838
+#[6,] -3.219288  0.52273674  0.2443125  2.1305522 -0.58543333  1.4356477  0.3807933
+#[7,]  3.368309 -0.06483340 -0.4144430  1.4141503  0.13867710 -2.7432802 -0.1071704
+#[8,]  0.327983  0.40191750  0.5201164 -1.4425673  0.08411104 -3.2553009  0.8269011
+#[9,] -2.328923  0.24018359  0.3600157 -1.4770771 -0.02555609  3.3456069  0.1134894
+#     PSS_Tub      PPk_Tub    PFl_Tub    PHse_Tub        Income
+#[1,] -0.5439314 -1.985589736  7.2842366  0.08861460  0.0016409768
+#[2,]  0.4654604 -0.112383415  4.4756356 -0.88522122  0.0006668972
+#[3,]  0.4289840 -0.001327636 -2.4592205  0.44646938 -0.0003652821
+#[4,]  0.9191657 -3.946940252 -1.8760068 -0.02523226  0.0017337857
+#[5,] -0.7013852 -1.496712513 -0.8929301  1.37982724 -0.0038574295
+#[6,] -1.3751041  2.746376269 -0.2455363 -0.04706146  0.0023549255
+#[7,]  0.1073857 -3.347189989 -0.6743368  0.49371864  0.0008566807
+#[8,] -0.3248026 -1.574199461  2.8544507 -0.30313350 -0.0023654522
+#[9,] -0.7065482  3.826741550 -2.7926906  0.04059748  0.0036609779
+
+## Question 2
+# Here for example, I cut off the variables "PPk_Stk" and "PBB_Stk", then I combine the remaining 10 variables(including the intercept) into one subsample dataset.
+# Again firstly, we need to import the likelihood function.
+Q5_function_Cut = function(par,X,yhat_Q5)
+{
+  xbeta_Q5 = as.matrix(X)%*%as.matrix(par)
+  pr = exp(xbeta_Q5)/(1+exp(xbeta_Q5))
+  pr[pr>0.999999] = 0.999999
+  pr[pr<0.000001] = 0.000001
+  like = yhat_Q5*log(pr) + (1-yhat_Q5)*log(1-pr)
+  return(-sum(like))
+}
+
+# Benchmark: 2nd logistic regression
+set.seed(111)
+subset_Baseline<- subset(Combined_data, Combined_data$choice<3)
+subset_Choice2<- dplyr::mutate(subset_Baseline,choice2=subset_Baseline$choice-1)
+Initial_value = runif(10,-1,1)
+Q5_Benchmark_Cut  = optim(Initial_value,fn = Q5_function_Cut, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,5:13]),yhat_Q5=subset_Choice2$choice2,hessian=TRUE)
+Q5_Benchmark_Cut$par
+#[1] -8.195115355  1.032640790  0.205848529  0.927906414 -0.897656260 -0.594210160
+#[7] -1.870894780  7.464739505  0.124867791  0.001608828
+
+# 3rd logistic regression
+set.seed(112)
+subset_Baseline2<- subset(Combined_data, Combined_data$choice>1 & Combined_data$choice<4)
+subset_Choice3<- dplyr::mutate(subset_Baseline2,choice3=subset_Baseline2$choice-2)
+Initial_value = runif(10,-1,1)
+Q5_Choice3_Cut= optim(Initial_value,fn = Q5_function_Cut, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,5:13]),yhat_Q5=subset_Choice3$choice3,hessian=TRUE)
+Q5_Choice3_Cut$par
+#[1] -5.0245940343 -1.0237106882  0.4528793796  0.7686106335 -0.4955361789
+#[6]  0.4843777383 -0.0458152609  4.2999009413 -0.9570744424  0.0006633013
+
+# 4nd
+#[1] -5.2666043454  0.0340319068  0.2955051021 -1.0151054611  0.3809924520
+#[6]  0.5685948733 -0.5049538584  0.4654603974 -0.1123834150  4.4756355712
+#[11] -0.8852212233  0.0006668972
+
+# 4th logistic regression
+set.seed(113)
+subset_Baseline3<- subset(Combined_data, Combined_data$choice>2 & Combined_data$choice<5)
+subset_Choice4<- dplyr::mutate(subset_Baseline3,choice4=subset_Baseline3$choice-3)
+Initial_value = runif(10,-1,1)
+Q5_Choice4_Cut = optim(Initial_value,fn = Q5_function_Cut, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,5:13]),yhat_Q5=subset_Choice4$choice4,hessian=TRUE)
+Q5_Choice4_Cut$par
+#[1]  1.5701208193  2.5953738023 -0.3614998447 -0.6828137060 -0.3270267045
+#[6]  0.4635988142  0.1818944615 -2.8838500713  0.2660614702 -0.0003872058
+
+# 5th logistic regression 
+set.seed(111)
+subset_Baseline4<- subset(Combined_data, Combined_data$choice>3 & Combined_data$choice<6)
+subset_Choice5<- dplyr::mutate(subset_Baseline4,choice5=subset_Baseline4$choice-4)
+Initial_value = runif(10,-1,1)
+Q5_Choice5_Cut = optim(Initial_value,fn = Q5_function_Cut, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,5:13]),yhat_Q5=subset_Choice5$choice5,hessian=TRUE)
+Q5_Choice5_Cut$par
+#[1]  4.549778289  1.193816444 -0.375559686 -1.277617751 -0.590318719  0.823091961
+#[7] -3.658396117 -1.758890034 -0.038573952  0.001666371
+
+# 6th logistic regression 
+set.seed(115)
+subset_Baseline5<- subset(Combined_data, Combined_data$choice>4 & Combined_data$choice<7)
+subset_Choice6<- dplyr::mutate(subset_Baseline5,choice6=subset_Baseline5$choice-5)
+Initial_value = runif(10,-1,1)
+Q5_Choice6_Cut = optim(Initial_value,fn = Q5_function_Cut, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,5:13]),yhat_Q5=subset_Choice6$choice6,hessian=TRUE)
+Q5_Choice6_Cut$par
+#[1]  0.839935646  0.697560417 -0.227969177 -3.020787509  0.703892450 -0.722055809
+#[7] -1.501288536 -0.751768009  1.442509940 -0.003852873
+
+# 7th logistic regression 
+set.seed(116)
+subset_Baseline6<- subset(Combined_data, Combined_data$choice>5 & Combined_data$choice<8)
+subset_Choice7<- dplyr::mutate(subset_Baseline6,choice7=subset_Baseline6$choice-6)
+Initial_value = runif(10,-1,1)
+Q5_Choice7_Cut = optim(Initial_value,fn = Q5_function_Cut, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,5:13]),yhat_Q5=subset_Choice7$choice7,hessian=TRUE)
+Q5_Choice7_Cut$par
+#[1] -2.570801787  2.105657650 -0.353118166  1.454541765  0.476245831 -1.225453680
+#[7]  2.292880209 -0.311028619  0.017277693  0.002448508
+
+# 8th logistic regression 
+set.seed(117)
+subset_Baseline7<- subset(Combined_data, Combined_data$choice>6 & Combined_data$choice<9)
+subset_Choice8<- dplyr::mutate(subset_Baseline7,choice8=subset_Baseline7$choice-7)
+Initial_value = runif(10,-1,1)
+Q5_Choice8_Cut = optim(Initial_value,fn = Q5_function_Cut, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,5:13]),yhat_Q5=subset_Choice8$choice8,hessian=TRUE)
+Q5_Choice8_Cut$par
+#[1]  3.0397804893  1.3953667748  0.0261261195 -3.0056468253 -0.1054394539
+#[6]  0.0802362217 -3.4002515369 -0.4615219471  0.5882467583  0.0008656577
+
+# 9th logistic regression 
+set.seed(118)
+subset_Baseline8<- subset(Combined_data, Combined_data$choice>7 & Combined_data$choice<10)
+subset_Choice9<- dplyr::mutate(subset_Baseline8,choice9=subset_Baseline8$choice-8)
+Initial_value = runif(10,-1,1)
+Q5_Choice9_Cut = optim(Initial_value,fn = Q5_function, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,5:13]),yhat_Q5=subset_Choice9$choice9,hessian=TRUE)
+Q5_Choice9_Cut$par
+#[1]  0.989271680 -1.417722110  0.335045587 -2.994121065  0.875752459 -0.225390433
+#[7] -1.798831229  2.641545946 -0.341972775 -0.002310261
+
+# 10th logistic regression 
+set.seed(1119)
+subset_Baseline9<- subset(Combined_data, Combined_data$choice>8)
+subset_Choice10<- dplyr::mutate(subset_Baseline9,choice10=subset_Baseline9$choice-9)
+Initial_value = runif(10,-1,1)
+Q5_Choice10_Cut = optim(Initial_value,fn = Q5_function_Cut, method="BFGS", control=list(trace=6,maxit=1000),X=cbind(1,Combined_data[,5:13]),yhat_Q5=subset_Choice10$choice10,hessian=TRUE)
+Q5_Choice10_Cut$par
+#[1] -1.90135658 -1.47538290  0.13582306  3.56336651  0.13757585 -0.65093373
+#[7]  3.74534110 -2.96772188 -0.00208449  0.00370112
+#[1] -2.328922824  0.240183588  0.360015727 -1.477077147 -0.025556093  3.345606862
+#[7]  0.113489420 -0.706548249  3.826741550 -2.792690599  0.040597481  0.003660978
+
+Q5_Cut_Final_Result<- rbind(Q5_Benchmark_Cut$par,Q5_Choice3_Cut$par,Q5_Choice4_Cut$par,Q5_Choice5_Cut$par,Q5_Choice6_Cut$par,Q5_Choice7_Cut$par,Q5_Choice8_Cut$par,Q5_Choice9_Cut$par,Q5_Choice10_Cut$par)
+colnames(Q5_Cut_Final_Result) <- c("intercept", "PFl_Stk", "PHse_Stk", "PGen_Stk", "PImp_Stk", "PSS_Tub", "PPk_Tub", "PFl_Tub", "PHse_Tub", "Income")
+Q5_Cut_Final_Result
+#     intercept    PFl_Stk    PHse_Stk   PGen_Stk   PImp_Stk     PSS_Tub
+#[1,] -8.1951154  1.0326408  0.20584853  0.9279064 -0.8976563 -0.59421016
+#[2,] -5.0245940 -1.0237107  0.45287938  0.7686106 -0.4955362  0.48437774
+#[3,]  1.5701208  2.5953738 -0.36149984 -0.6828137 -0.3270267  0.46359881
+#[4,]  4.5389888  1.1992651 -0.37567131 -1.2815549 -0.5912688  0.82368875
+#[5,]  0.8399356  0.6975604 -0.22796918 -3.0207875  0.7038925 -0.72205581
+#[6,] -2.5708018  2.1056576 -0.35311817  1.4545418  0.4762458 -1.22545368
+#[7,]  3.0397805  1.3953668  0.02612612 -3.0056468 -0.1054395  0.08023622
+#[8,]  0.9892717 -1.4177221  0.33504559 -2.9941211  0.8757525 -0.22539043
+#[9,] -1.9013566 -1.4753829  0.13582306  3.5633665  0.1375759 -0.65093373
+#       PPk_Tub    PFl_Tub    PHse_Tub        Income
+#[1,]-1.87089478  7.4647395  0.12486779  0.0016088285
+#[2,] -0.04581526  4.2999009 -0.95707444  0.0006633013
+#[3,]  0.18189446 -2.8838501  0.26606147 -0.0003872058
+#[4,] -3.66281913 -1.7490082 -0.03826222  0.0016610559
+#[5,] -1.50128854 -0.7517680  1.44250994 -0.0038528727
+#[6,]  2.29288021 -0.3110286  0.01727769  0.0024485080
+#[7,] -3.40025154 -0.4615219  0.58824676  0.0008656577
+#[8,] -1.79883123  2.6415459 -0.34197278 -0.0023102615
+#[9,]  3.74534110 -2.9677219 -0.00208449  0.0037011199
+
+## Question 3
+Q5_Final_Result
+Q5_Cut_Final_Result
+E5_Q3 <- Q5_Final_Result[, -2:-3]
+MTT<- (-2) * (E5_Q3-Q5_Cut_Final_Result)%*% (var(E5_Q3)-var(Q5_Cut_Final_Result)) %*% t(E5_Q3-Q5_Cut_Final_Result)
+MTT
+#         [,1]        [,2]       [,3]        [,4]         [,5]       [,6]
+#[1,] -0.34431603 -0.08799140 -0.2622262 -0.72474347 -0.053060178  1.1105019
+#[2,] -0.08799140  0.22602948  0.5580271  0.08581537 -0.155056834 -0.2702651
+#[3,] -0.26222619  0.55802712  1.3722992  0.12962366 -0.396245817 -0.5475200
+#[4,] -0.72474347  0.08581537  0.1296237 -1.22989473 -0.265845948  1.7333586
+#[5,] -0.05306018 -0.15505683 -0.3962458 -0.26584595  0.072375999  0.4861958
+#[6,]  1.11050193 -0.27026512 -0.5475200  1.73335857  0.486195809 -2.3472269
+#[7,]  0.03891266 -0.25945050 -0.6478815 -0.21176255  0.159364119  0.4747618
+#[8,]  0.62450243  0.06389183  0.2349092  1.20995966  0.150604696 -1.8005177
+#[9,]  0.26958645  0.12772456  0.3532674  0.63150554  0.007976365 -1.0004694
+#         [,7]        [,8]         [,9]
+#[1,]  0.03891266  0.62450243  0.269586452
+#[2,] -0.25945050  0.06389183  0.127724560
+#[3,] -0.64788148  0.23490922  0.353267441
+#[4,] -0.21176255  1.20995966  0.631505545
+#[5,]  0.15936412  0.15060470  0.007976365
+#[6,]  0.47476177 -1.80051770 -1.000469367
+#[7,]  0.28760988  0.03307914 -0.094287636
+#[8,]  0.03307914 -1.09551836 -0.511417668
+#[9,] -0.09428764 -0.51141767 -0.197019606
+
+## Question 4
+IIA<- chisq.test(abs(MTT))
+IIA
+
+#Pearson's Chi-squared test
+#data:  abs(MTT)
+#X-squared = 10.698, df = 64, p-value = 1
+
+## Here since p-value = 1, I am confident to say that this text could not pass the IIA examination. 
