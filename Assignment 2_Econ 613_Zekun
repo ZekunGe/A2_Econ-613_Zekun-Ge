@@ -1,3 +1,4 @@
+
 getwd()
 setwd(dir = "E:/Econ 613")
 
@@ -81,6 +82,7 @@ summary(CLM_Price_To_Demand)
 # Conditional Logit Models_Double Check
 CLM_DC_Price_To_Demand <- mclogit(cbind(choice, hhid) ~ PPk_Stk+PBB_Stk+PFl_Stk+PHse_Stk+PGen_Stk+PImp_Stk+PSS_Tub+PPk_Tub+PFl_Tub+PHse_Tub, data = Combined_data)
 summary(CLM_DC_Price_To_Demand)
+
 # Multinomial Logistic Regression
 # install.packages("nnet")
 library(nnet)
@@ -151,11 +153,37 @@ CML_OP$par
 #[1] -0.9542845  1.2969909 -1.7173609 -2.9039674 -1.5152779  0.2517494  1.4648639
 #[8]  2.3575283 -3.8966447 -6.6565684
 
+#==============================
+#==============================
 
-# Here I redo the Multinomial Logistic Regression with optimization codes by hand. 
+## Here I redo the Multinomial Logistic Regression with optimization codes by hand.
+library(nnet)
 MNR_DC_Price_To_Demand <- multinom(choice ~ PPk_Stk+PBB_Stk+PFl_Stk+PHse_Stk+PGen_Stk+PImp_Stk+PSS_Tub+PPk_Tub+PFl_Tub+PHse_Tub, data = Combined_data)
 summary(MNR_DC_Price_To_Demand)
-# As a comparison test and for simplicity, I will only include variable "PPk_Stk" and the intercept.
+# Coefficients:
+#  (Intercept)  PPk_Stk    PBB_Stk    PFl_Stk   PHse_Stk   PGen_Stk    PImp_Stk
+#2   10.313369 9.819989 -8.1294606 -5.2855797 -1.1613450 -4.3463649  0.80336821
+#3    9.102908 5.848488 -1.9635371  0.2555664 -0.6321478  4.2679778  0.22886092
+#4  -10.027124 8.133483  0.9393900  3.6001091 -8.0807146  3.5933638 -1.03666128
+#5  -11.287666 7.247535  0.1194297  1.7764225  1.9751487 -0.1338391 -0.86968403
+#6    7.524780 4.410754 -1.8541018  7.5319053 -1.4283417  8.0817961 -6.80251218
+#7    2.652380 6.199103 -0.9797922  1.7584687 -2.0675780  7.6203613 -0.59343667
+#8    3.553732 6.984814 -0.4977996  2.7348219 -1.3097354  1.3929160  0.26946045
+#9   19.121241 4.924174 -2.2849201  3.8151932  0.1820719  1.3133598  0.07664768
+#10   6.836234 5.073909  0.2891289  7.1277244 -3.1699201  5.1362874  0.69282553
+#    PSS_Tub    PPk_Tub     PFl_Tub   PHse_Tub
+#2  -0.5247436 20.0038966 -23.2635440  1.5170441
+#3 -16.3088139  1.7107520  -4.0529257  2.9399464
+#4   1.8710366  4.4917797  -2.7199745  0.5880576
+#5   0.5576573  1.7368377   0.8557716  0.4455628
+#6  -1.1107287  2.8737166 -15.1102847 -1.1361534
+#7 -14.9290288  3.9302533  -1.9096152  0.4348106
+#8  -9.7493372  0.8742761  -4.1996177  0.3412069
+#9 -14.1834262  1.7480806 -14.2005057 -0.3411443
+#10 -2.5347974  9.3305694 -22.0455562 -6.7099340
+
+## As a comparison test and for simplicity, I will only include variable "PPk_Stk" and the intercept.
+
 # Here comes the the result of package testings
 MNR_DC1_Price_To_Demand <- multinom(choice ~ PPk_Stk, data = Combined_data)
 summary(MNR_DC1_Price_To_Demand)
@@ -576,7 +604,9 @@ Q3_Final_Result
 ##// Exercise Four
 
 ## For Question Two
-# multinominal logistic regression 
+## Package use of "margins"
+
+# conditional logistic regression 
 library(mclogit)
 CLM_Price_To_Demand <- mclogit(cbind(choice, hhid) ~ PPk_Stk+PBB_Stk+PFl_Stk+PHse_Stk+PGen_Stk+PImp_Stk+PSS_Tub+PPk_Tub+PFl_Tub+PHse_Tub, data = margarine[["choicePrice"]])
 summary(CLM_Price_To_Demand)
@@ -645,6 +675,7 @@ head.matrix(All_marginal_effect_Price_To_Demand)
 #5     1.120726   -1.4562497     1.860532   -0.16527351
 #6     0.775840   -2.1741654     2.654120   -0.20352224
 
+## Here do them by hands
 # Conditional logit regression: Marginal Effects at means
 Variable_mean <- apply(Combined_data[, 3:12], 2, mean)
 X_beta <- sum(Variable_mean * CLM_Price_To_Demand$coefficients)
@@ -654,7 +685,8 @@ CLM_ME_Price_To_Demand <- (X_beta_variation - X_beta)/0.00001
 head(CLM_ME_Price_To_Demand)
 # [1] 1.890542
 
-# For Question Three
+
+## For Question Three
 MNR_Income_To_Demand <- multinom(choice ~ Income, data = Combined_data)
 summary(MNR_Income_To_Demand)
 summary(MNR_Income_To_Demand, cor = F)
@@ -972,4 +1004,4 @@ IIA
 #data:  abs(MTT)
 #X-squared = 10.698, df = 64, p-value = 1
 
-## Here since p-value = 1, I am confident to say that this text could not pass the IIA examination. 
+## Here because p-value = 1, I am confident to say that this text could not pass the IIA examination. 
